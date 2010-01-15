@@ -1,0 +1,115 @@
+%--------------------------------------------
+% Constrained Pair HMM
+% Christian Theil Have, Jan. 2010.
+%--------------------------------------------
+% What kind of constraints?
+% - Fix alignment to include a particular partial alignment
+%   (in a given position range)
+% - Fix number of insertions/deletions allowed
+% - Maybe probability cutoff
+%
+% Issues:
+% - Depends a lot on failure, which may be inefficient.
+% - Insert may not be followed by delete and vice versa gives problems:
+%   - Easy solution -> transitions between insert and delete...
+%   -
+
+failure :-
+	cpairhmm(_,_,Alignment),
+	member(failure,Alignment).
+
+cmsw(A,B) :-
+	values(A,AVals),
+	member(B,AVals).
+
+%custom_msw(A,B) :- msw(A,B).
+
+% List of symbols which may be used in sequences aligned.
+alphabet([a,c,g,t]).
+
+match_permutations(A,P) :-
+	findall([X,Y], (member(X,A),member(Y,A)), P).
+
+% MSW declarations
+
+values(emit(insert), A) :- alphabet(A).
+
+values(emit(delete), A) :- alphabet(A).
+
+values(emit(match), M) :-
+	alphabet(A),
+	match_permutations(A,M).
+
+values(trans(begin),[match,delete,insert]).
+values(trans(match), [match,delete,insert]).
+values(trans(insert), [match,insert]).
+values(trans(delete), [match,delete]).
+
+
+
+cpairhmm(InputA,InputB,Alignment) :-
+	initial_empty_constraint_store(Constraints),
+	cmsw(trans(begin), StartState),
+	cpairhmm_rec(StartState,InputA,InputB,Constraints,Alignment).
+
+cpairhmm_rec(match,[A|ARest],[B|BRest],ConstraintsBefore,[[A,B]|AlignmentRest]) :-
+	cmsw(emit(match), [A,B]),
+	check_constraints([A,B],ConstraintsBefore,ConstraintsAfter),
+	cmsw(trans(match), NextState),
+	cpairhmm_rec(NextState,ARest,BRest,ConstraintsAfter,AlignmentRest).
+
+cpairhmm_rec(delete,ARest,[B|BRest],ConstraintsBefore,[[-,B]|AlignmentRest]) :-
+	cmsw(emit(delete),B),
+	check_constraints([-,B],ConstraintsBefore,ConstraintsAfter),
+	cmsw(trans(delete), NextState),
+	cpairhmm_rec(NextState,ARest,BRest,ConstraintsAfter,AlignmentRest).
+
+cpairhmm_rec(insert,[A|ARest],BRest,ConstraintsBefore,[[A,-]|AlignmentRest]) :-
+	cmsw(emit(insert),A),
+	check_constraints([A,-],ConstraintsBefore,ConstraintsAfter),
+	cmsw(trans(insert), NextState),
+	cpairhmm_rec(NextState,ARest,BRest,ConstraintsAfter,AlignmentRest).
+
+cpairhmm_rec(_,[],[],_,[]) :- write('termination'), nl, !.
+
+cpairhmm_rec(_,_,_,[failure]) :- !.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Some basic machinery/glue for linking together constraint checks
+
+list_of_empty_lists(0,[]).
+list_of_empty_lists(N,[[]|R]) :-
+	N1 is N - 1,
+	list_of_empty_lists(N1,R).
+
+% Produce an initial constraint store with (empty) constraint lists for
+% user-defined constraint check
+initial_empty_constraint_store(Store) :-
+	constraint_checks(Checks),
+	length(Checks,NumChecks),
+	list_of_empty_lists(NumChecks,Store).
+
+check_constraints(_,C,C).
+/*
+% Constraint check is called for each change of state in the model, which
+% could possible lead to a constraint-violation.
+check_constraints(StateUpdate,ConstraintsBefore,ConstraintsAfter) :-
+	constraint_checks(Checks),
+	check_each_constraint(StateUpdate,Checks,ConstraintsBefore,ConstraintsAfter).
+
+check_each_constraint(_,_,[],[],[]).
+
+check_each_constraint(StateUpdate,[Check|ChecksRest],
+		      [StoreBefore|StoreBeforeRest],
+		      [StoreAfter|StoreAfterRest]) :-
+	check_constraint(Check,StateUpdate,StoreBefore,StoreAfter),
+	!,
+	check_each_constraint(ChecksRest,StateUpdate,StoreBeforeRest,StoreAfterRest).
+*/
+
+%%% Test:
+% Simple model with no constraints
+% constraint_checks([]).
+
+constraint_checks([]).
