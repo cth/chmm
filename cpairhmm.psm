@@ -2,114 +2,251 @@
 % Constrained Pair HMM
 % Christian Theil Have, Jan. 2010.
 %--------------------------------------------
-% What kind of constraints?
-% - Fix alignment to include a particular partial alignment
-%   (in a given position range)
-% - Fix number of insertions/deletions allowed
-% - Maybe probability cutoff
-%
-% Issues:
-% - Depends a lot on failure, which may be inefficient.
-% - Insert may not be followed by delete and vice versa gives problems:
-%   - Easy solution -> transitions between insert and delete...
-%   -
+
+% Suppress warning about certain clauses not being grouped together
+:- discontiguous(init_constraint_store/2).
+:- discontiguous(constraint_check/4).
 
 failure :-
 	cpairhmm(_,_,Alignment),
 	member(failure,Alignment).
 
-cmsw(A,B) :-
-	values(A,AVals),
-	member(B,AVals).
+% Use for debugging:
+cmsw(A,B) :- values(A,AVals), member(B,AVals).
 
-%custom_msw(A,B) :- msw(A,B).
+%cmsw(A,B) :- msw(A,B).
 
 % List of symbols which may be used in sequences aligned.
 alphabet([a,c,g,t]).
+%alphabet([a]).
 
 match_permutations(A,P) :-
 	findall([X,Y], (member(X,A),member(Y,A)), P).
 
 % MSW declarations
 
-values(emit(insert), A) :- alphabet(A).
+values(emit(insert), ABList) :-
+	findall(AB,(alphabet(A),member(E,A),emit(insert,E,-,AB)),ABList).
 
-values(emit(delete), A) :- alphabet(A).
+values(emit(delete), ABList) :-
+	findall(AB,(alphabet(B),member(E,B),emit(delete,-,E,AB)),ABList).
 
-values(emit(match), M) :-
+values(emit(match), AB) :-
 	alphabet(A),
-	match_permutations(A,M).
+	match_permutations(A,AB).
 
 values(trans(begin),[match,delete,insert]).
 values(trans(match), [match,delete,insert]).
 values(trans(insert), [match,insert]).
 values(trans(delete), [match,delete]).
 
-
+emit(match, A, B, [A,B]).
+emit(delete, _, B, [-,B]).
+emit(insert, A, _, [A,-]).
 
 cpairhmm(InputA,InputB,Alignment) :-
-	initial_empty_constraint_store(Constraints),
-	cmsw(trans(begin), StartState),
-	cpairhmm_rec(StartState,InputA,InputB,Constraints,Alignment).
+	init_constraint_stores(ConstraintStores),
+	cpairhmm(begin,InputA,InputB,ConstraintStores,Alignment).
 
-cpairhmm_rec(match,[A|ARest],[B|BRest],ConstraintsBefore,[[A,B]|AlignmentRest]) :-
-	cmsw(emit(match), [A,B]),
-	check_constraints([A,B],ConstraintsBefore,ConstraintsAfter),
-	cmsw(trans(match), NextState),
-	cpairhmm_rec(NextState,ARest,BRest,ConstraintsAfter,AlignmentRest).
+cpairhmm(PreviousState,[A|ARest],[B|BRest], ConstraintsBefore,[Emit|AlignmentRest]) :-
+	cmsw(trans(PreviousState), NextState),
+	emit(NextState,A,B,Emit),
+	check_constraints([NextState,Emit],ConstraintsBefore,ConstraintsAfter),
+	cpairhmm_next(NextState,[A|ARest],[B|BRest],
+		      ConstraintsAfter,AlignmentRest).
 
-cpairhmm_rec(delete,ARest,[B|BRest],ConstraintsBefore,[[-,B]|AlignmentRest]) :-
-	cmsw(emit(delete),B),
-	check_constraints([-,B],ConstraintsBefore,ConstraintsAfter),
-	cmsw(trans(delete), NextState),
-	cpairhmm_rec(NextState,ARest,BRest,ConstraintsAfter,AlignmentRest).
+cpairhmm(_,[],[],_,[]).
 
-cpairhmm_rec(insert,[A|ARest],BRest,ConstraintsBefore,[[A,-]|AlignmentRest]) :-
-	cmsw(emit(insert),A),
-	check_constraints([A,-],ConstraintsBefore,ConstraintsAfter),
-	cmsw(trans(insert), NextState),
-	cpairhmm_rec(NextState,ARest,BRest,ConstraintsAfter,AlignmentRest).
+cpairhmm(_,_,_,[failure]).
 
-cpairhmm_rec(_,[],[],_,[]) :- write('termination'), nl, !.
+cpairhmm_next(match,[_|A],[_|B],Constraints,Alignment) :-
+	cpairhmm(insert,A,B,Constraints,Alignment).
 
-cpairhmm_rec(_,_,_,[failure]) :- !.
+cpairhmm_next(insert,[_|A],B,Constraints,Alignment) :-
+	cpairhmm(insert,A,B,Constraints,Alignment).
 
+cpairhmm_next(delete,A,[_|B],Constraints,Alignment) :-
+	cpairhmm(delete,A,B,Constraints,Alignment).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Some basic machinery/glue for linking together constraint checks
 
-list_of_empty_lists(0,[]).
-list_of_empty_lists(N,[[]|R]) :-
-	N1 is N - 1,
-	list_of_empty_lists(N1,R).
-
-% Produce an initial constraint store with (empty) constraint lists for
-% user-defined constraint check
-initial_empty_constraint_store(Store) :-
+init_constraint_stores(Stores) :-
 	constraint_checks(Checks),
-	length(Checks,NumChecks),
-	list_of_empty_lists(NumChecks,Store).
+	init_constraint_stores(Checks,Stores).
 
-check_constraints(_,C,C).
-/*
+init_constraint_stores([],[]).
+init_constraint_stores([Check|CheckRest],[Store|StoreRest]) :-
+	init_constraint_store(Check,Store),
+	init_constraint_stores(CheckRest,StoreRest).
+
 % Constraint check is called for each change of state in the model, which
 % could possible lead to a constraint-violation.
 check_constraints(StateUpdate,ConstraintsBefore,ConstraintsAfter) :-
 	constraint_checks(Checks),
 	check_each_constraint(StateUpdate,Checks,ConstraintsBefore,ConstraintsAfter).
 
-check_each_constraint(_,_,[],[],[]).
+check_each_constraint(_,[],[],[]).
 
 check_each_constraint(StateUpdate,[Check|ChecksRest],
 		      [StoreBefore|StoreBeforeRest],
 		      [StoreAfter|StoreAfterRest]) :-
-	check_constraint(Check,StateUpdate,StoreBefore,StoreAfter),
+	constraint_check(Check,StateUpdate,StoreBefore,StoreAfter),
 	!,
-	check_each_constraint(ChecksRest,StateUpdate,StoreBeforeRest,StoreAfterRest).
+	check_each_constraint(StateUpdate,ChecksRest,StoreBeforeRest,StoreAfterRest).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Queue implementation. Possibly replace with
+% something more sophisticated/efficient later on..
+
+empty_queue(q(0, Ys, Ys)).
+enqueue(X, q(N, Ys, [X|Zs]), q(N1, Ys, Zs)) :- N1 is N+1.
+dequeue(X, q(N, [X|Ys], Zs), q(N1, Ys, Zs)) :- N1 is N-1.
+queue_size(q(Size,_,_),Size).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Constraint implementations
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Constraint: max_visits(State,MaxVisits)
+% Enforce an absolute bound on the number of visits
+% to a particular state.
+
+init_constraint_store(max_visits(_,_),[0]).
+
+constraint_check(max_visits(State,Max), [State,_], [VisitsBefore], [VisitsAfter]) :-
+	VisitsAfter is VisitsBefore + 1,
+	VisitsAfter =< Max.
+
+constraint_check(max_visits(ConstraintState,_), [VisitState,_], BeforeAndAfter,BeforeAndAfter) :-
+	ConstraintState \= VisitState.
+
+%%% Constraint: max_visit_relative(State,MaxVisits,WindowSize)
+% This constraint enforces that a particular state is visited
+% at most MaxVisits in any state sequence of WindowSize length
+
+init_constraint_store(max_visits_relative(_,_,_),[Queue,0]) :- empty_queue(Queue).
+
+constraint_check(max_visits_relative(ConstrainedStates,MaxVisits,WindowSize),
+		 [State,_],
+		 [QueueBefore,VisitsBefore], [QueueAfter,VisitsAfter]) :-
+	enqueue(State,QueueBefore,TmpQueue),
+	queue_size(TmpQueue,QueueSize),
+	((QueueSize > WindowSize) ->
+	 dequeue(ForgetState,TmpQueue,QueueAfter),
+	 (member(ForgetState,ConstrainedStates) -> ForgottenVisits = 1 ; ForgottenVisits = 0)
+	;
+	 QueueAfter = TmpQueue, ForgottenVisits = 0),
+	(member(State,ConstrainedStates) -> NewVisits = 1 ; NewVisits = 0),
+	VisitsAfter is VisitsBefore + NewVisits - ForgottenVisits,
+	VisitsAfter =< MaxVisits.
+
+%%% Constraint: min_visit_relative(State,MinVisits,WindowSize)
+% This constraint enforces that a particular state is visited
+% at least MinVisits in any state sequence of WindowSize length
+% FIXME: Implement
+
+
+%%% Fix alignment constraint %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Constrains the alignment of position m_1..m_x of sequence 1
+% to be aligned to position n_1..n_y of sequence 2 in the way
+% given by StateSequence
+
+init_constraint_store(fix_alignment(_,_,Alignment),[1,1,Alignment]).
+
+% As long as alignment positions in sequences have not yet been reached,
+% do appropriate increment and :-)
+constraint_check(fix_alignment(S1From,S2From,_),[State,_], [S1Pos,S2Pos,Align],[S1PosNext,S2PosNext,Align]) :-
+	S1Pos < S1From,
+	S2Pos < S2From,
+	(member(State,[delete,match]) -> S1PosNext is S1Pos + 1 ; S1PosNext=S1Pos),
+	(member(State,[insert,match]) -> S2PosNext is S2Pos + 1 ; S2PosNext=S2Pos).
+
+% If both sequence position has been incremented to the alignment start position,
+% then we compare with the sequence alignment.
+% (if one sequences is incremented beyond the alignment start position then
+% the constraint will fail!)
+% Note that the constraint may be expressed as sequence of states of or as a
+% sequence of emissions (a "ground" alignment) or a combination thereof
+constraint_check(fix_alignment(S1From,S2From,_),[State,Emit],
+		 [S1Pos,S2Pos,[CurPosAlign|AlignRest]],[S1Pos,S2Pos,AlignRest]) :-
+	S1Pos == S1From,
+	S2Pos == S2From,
+	(Emit==CurPosAlign ; State==CurPosAlign).
+
+% If the list for the alignment becomes empty then it has succesfully been checked:
+constraint_check(fix_alignment(_,_,_),_,[S1,S2,[]],[S1,S2,[]]).
+
+%%% The for_range operator %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Enforces a given constraint for a particular range:
+
+constraint_check(for_range(From,To,Constraint),[State,Emit],
+		 [PositionBefore, ConstraintSpecificStoreBefore],
+		 [PositionAfter, ConstraintSpecificStoreAfter]) :-
+	PositionAfter is PositionBefore + 1,
+	PositionAfter >= From,
+	PositionAfter =< To,
+	constraint_check(Constraint,[State,Emit],
+			 [ConstraintSpecificStoreBefore],
+			 [ConstraintSpecificStoreAfter]).
+
+	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Tests
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Simple model with no constraints
+
+/*
+constraint_checks([]).
+test :-	cpairhmm([a,g,a,g],[g,a,g,a],X),write(X).
 */
 
-%%% Test:
-% Simple model with no constraints
-% constraint_checks([]).
 
+% Simple global cardinality: Limit number of insertions.
+% With max_insertions(1) this gives only 3 possible alignments
+
+/*
+constraint_checks([max_visits(insert,1)]).
+test1 :- cpairhmm([a,g,a,g],[g,a,g,a],X), write(X).
+*/
+
+/* Test of max_visits_relative
+constraint_checks([max_visits_relative([delete,insert],1,10)]).
+
+test2 :-
+	cpairhmm([a,g,a,g],[g,a,g,a],X),
+	write(X).
+
+long_test2 :-
+	cpairhmm([a,g,a,g,a,g,a,g,a,g,a,g],[g,a,g,a,g,a,g,a,g,a,g,a],X),
+	write(X).
+*/
+
+
+/* Test of fix_alignment
+
+ 1 2 3 4 5 6 7 8 9 A B C
+[a,g,a,g,a,g,a,g,a,g,a,g]
+[g,a,g,a,g,a,g,a,g,a,g,a]
+ ? ? ? i m m m m ? ? ? ?
+
+*/
+
+%constraint_checks([fix_alignment(1,1,[insert,match])]).
 constraint_checks([]).
+
+ga :-
+	cpairhmm([a,g],[g,a],X),
+	write(X).
+
+gaga1 :-
+	cpairhmm([a,g,a,g],[g,a,g,a],X),
+	write(X).
+
+
+gaga3 :-
+	cpairhmm([a,g,a,g,a,g,a,g,a,g,a,g],[g,a,g,a,g,a,g,a,g,a,g,a],X),
+	write(X).				
+
+

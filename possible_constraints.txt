@@ -1,0 +1,109 @@
+Possible candidates for constraint:
+===================================
+
+It should be possible to check the constraints incrementally in
+constant time. This is true for the following types of constraints:
+
+- Regular expression constraint.
+  - Violation can be checked incrementally
+  - Membership cannot eliminate any paths
+    - Unless, we refer to membership within a window
+  - Possible use: exclude certain patterns to occur in the aligment.
+
+- Cardinality constraints
+  - Max/Min visits to a given set of states in a window of the sequence
+    (which may be the whole sequence)
+
+- Length/duration constraints
+  - Constrain a consequtive state sequence of states belonging
+    to a set A, to be,
+    - at least of length L
+    - at most of length L
+
+- Alldifferent:
+  - special case of RE constraint.
+  - Exponential increase in states
+
+As each of these constraints can be check incrementally 
+with a constant time penalty, the same is true for a 
+conjunction or disjunction of any of the constraints.
+
+
+All of above constraints should be able to operate in
+on sequences of a given window size.
+
+constraint_checks([
+	max_visits_relative([insert],1,10) ;
+	 max_visits_relative([delete],1,10))),
+	 for_range(100,200,
+		for_window(20,[max_visits([insert],10)]),
+		),
+	 re_constraint("s1*s2s2"))
+
+	for_window(20,visits([delete,insert]) < 20)
+
+% Should be the same?
+for_range(for_window(...))
+for_window(for_range(...))
+
+for_window should be outermost or it will not have queue
+from the beginning.
+
+re_match("s1*s2*s1", queue),
+
+e mfor_window cannot easily be done as an operator, because
+1) The maintainence of the window queue may be constraint specific
+2) Not easily done for automata: Regular expression matching 
+ must restart for each window
+
+Maybe it doesnt make sense to make a language for these constraints,
+since it can be done directly in Prolog, e.g. 
+
+constraint_check(custom_constraint, [State,Emit], CSB4,CSAfter) :-
+    cardinality([[insert,_],[delete,_]],VisitsToInsertOrDelete),
+
+    constraint_check(max_visits(insert,10), [State,_],
+                     [VisitsBefore],[VisitsAfter]),
+    constraint_check(min_visits(,
+
+
+Regular expressions:
+ - Represent the regular expression as automaton
+
+
+--- 
+
+What constraints we need for the pair hmm alignment problem:
+
+position m_1..m_x of sequence 1 aligned to position n_1..n_y of 
+sequence 2.
+
+How can this be implemented?
+
+Keep track of sequence 1 position and sequence 2 position.
+
+
+
+
+--- Some possible things:
+
+constraint_check(for_window(WindowSize,for_range(From,To,Constraint)),[State,Emit],
+		 ConstraintStoreBefore,ConstraintStoreAfter) :-
+	for_window_for_range(From,To,WindowSize)
+	constraint_check(for_range(From,To,for_window(WindowSize,Constraint)),[State,Emit],
+		 ConstraintStoreBefore,ConstraintStoreAfter).
+
+constraint_check(for_window(WindowSize,Constraint),[State,Emit],
+		 [QueueBefore, ConstraintSpecificStoreBefore],
+		 [QueueAfter, ConstraintSpecificStoreAfter]) :-
+	enqueue(State,QueueBefore,TmpQueue),
+	queue_size(TmpQueue,QueueSize),
+	((QueueSize > WindowSize) ->
+	 dequeue(ForgetState,TmpQueue,QueueAfter)
+	;
+	 QueueAfter = TmpQueue
+	),
+	constraint_check(Constraint,[State,Emit],
+			 [[Shifted,QueueAfter],ConstraintSpecificStoreBefore],
+			 [[Shifted,Queue],ConstraintSpecificStoreAfter]).
+

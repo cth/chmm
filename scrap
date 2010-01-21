@@ -1,3 +1,26 @@
+/*
+cpairhmm_rec(match,[A|ARest],[B|BRest],ConstraintsBefore,[[A,B]|AlignmentRest]) :-
+	cmsw(trans(match), NextState),
+	cmsw(emit(match), [A,B]),
+	check_constraints([A,B],ConstraintsBefore,ConstraintsAfter),
+	cpairhmm_rec(NextState,ARest,BRest,ConstraintsAfter,AlignmentRest).
+
+cpairhmm_rec(delete,ARest,[B|BRest],ConstraintsBefore,[[-,B]|AlignmentRest]) :-
+	cmsw(trans(delete), NextState),
+	cmsw(emit(delete),B),
+	check_constraints([-,B],ConstraintsBefore,ConstraintsAfter),
+	cpairhmm_rec(NextState,ARest,BRest,ConstraintsAfter,AlignmentRest).
+
+cpairhmm_rec(insert,[A|ARest],BRest,ConstraintsBefore,[[A,-]|AlignmentRest]) :-
+	cmsw(trans(insert), NextState),
+	cmsw(emit(insert),A),
+	check_constraints([A,-],ConstraintsBefore,ConstraintsAfter),
+	cpairhmm_rec(NextState,ARest,BRest,ConstraintsAfter,AlignmentRest).
+*/
+
+
+
+
 cpairhmm(InputA,InputB,Alignment) :-
 	initial_empty_constraint_store(Constraints),
 	fake_msw(trans(begin), StartState),
@@ -64,3 +87,27 @@ cpairhmm_rec(insert,[A|ARest],BRest,[[A,-]|AlignmentRest]) :-
 	cpairhmm_rec(NextState,ARest,BRest,AlignmentRest).
 
 cpairhmm_rec(_,_,_,[failure]) :- !.
+
+
+
+['cpairhmm'].
+['cpairhmm.psm'].
+constraint_check(fix_alignment(1,1,[match]), [match,[a,a]], [0,0,[insert]],X).
+
+
+
+/*
+cpairhmm(PreviousState,[],[B|BRest], ConstraintsBefore,[Emit|AlignmentRest]) :-
+	cmsw(trans(PreviousState), delete),
+	emit(delete,-,B,Emit),
+	check_constraints([delete,Emit],ConstraintsBefore,ConstraintsAfter),
+	cpairhmm(A,B,Constraints,Alignment).
+
+	cpairhmm_next(NextState,[],[B|BRest],ConstraintsAfter,AlignmentRest).
+
+cpairhmm(PreviousState,[A|ARest],[], ConstraintsBefore,[Emit|AlignmentRest]) :-
+	cmsw(trans(PreviousState), NextState),
+	emit(NextState,-,B,Emit), % NextState==insert
+	check_constraints([NextState,Emit],ConstraintsBefore,ConstraintsAfter),
+	cpairhmm_next(NextState,[A|ARest],[B|BRest],ConstraintsAfter,AlignmentRest).
+*/
