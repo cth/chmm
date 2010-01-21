@@ -48,25 +48,34 @@ cpairhmm(InputA,InputB,Alignment) :-
 	init_constraint_stores(ConstraintStores),
 	cpairhmm(begin,InputA,InputB,ConstraintStores,Alignment).
 
+cpairhmm(PreviousState,[],[B|BRest], ConstraintsBefore,[Emit|AlignmentRest]) :-
+	cmsw(trans(PreviousState), delete),
+	emit(delete,-,B,Emit),
+	check_constraints([delete,Emit],ConstraintsBefore,ConstraintsAfter),
+	cpairhmm(delete,[],BRest,ConstraintsAfter,AlignmentRest).
+
+cpairhmm(PreviousState,[A|ARest],[], ConstraintsBefore,[Emit|AlignmentRest]) :-
+	cmsw(trans(PreviousState), insert),
+	emit(insert,A,-,Emit),
+	check_constraints([insert,Emit],ConstraintsBefore,ConstraintsAfter),
+	cpairhmm(insert,ARest,[],ConstraintsAfter,AlignmentRest).
+
 cpairhmm(PreviousState,[A|ARest],[B|BRest], ConstraintsBefore,[Emit|AlignmentRest]) :-
 	cmsw(trans(PreviousState), NextState),
 	emit(NextState,A,B,Emit),
 	check_constraints([NextState,Emit],ConstraintsBefore,ConstraintsAfter),
-	cpairhmm_next(NextState,[A|ARest],[B|BRest],
-		      ConstraintsAfter,AlignmentRest).
+	((NextState==match,
+	  cpairhmm(NextState,ARest,BRest,ConstraintsAfter,AlignmentRest))
+	;
+	 ((NextState==insert,
+	  cpairhmm(NextState,ARest,[B|BRest],ConstraintsAfter,AlignmentRest)))
+	;
+	 ((NextState==delete,
+	  cpairhmm(NextState,[A|ARest],BRest,ConstraintsAfter,AlignmentRest)))).
 
 cpairhmm(_,[],[],_,[]).
 
 cpairhmm(_,_,_,[failure]).
-
-cpairhmm_next(match,[_|A],[_|B],Constraints,Alignment) :-
-	cpairhmm(insert,A,B,Constraints,Alignment).
-
-cpairhmm_next(insert,[_|A],B,Constraints,Alignment) :-
-	cpairhmm(insert,A,B,Constraints,Alignment).
-
-cpairhmm_next(delete,A,[_|B],Constraints,Alignment) :-
-	cpairhmm(delete,A,B,Constraints,Alignment).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Some basic machinery/glue for linking together constraint checks
@@ -178,6 +187,8 @@ constraint_check(fix_alignment(S1From,S2From,_),[State,Emit],
 % If the list for the alignment becomes empty then it has succesfully been checked:
 constraint_check(fix_alignment(_,_,_),_,[S1,S2,[]],[S1,S2,[]]).
 
+%%% Alldifferent constraint %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %%% The for_range operator %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Enforces a given constraint for a particular range:
 
@@ -195,46 +206,22 @@ constraint_check(for_range(From,To,Constraint),[State,Emit],
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Tests
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Simple model with no constraints
 
-/*
-constraint_checks([]).
-test :-	cpairhmm([a,g,a,g],[g,a,g,a],X),write(X).
-*/
-
-
-% Simple global cardinality: Limit number of insertions.
-% With max_insertions(1) this gives only 3 possible alignments
-
-/*
-constraint_checks([max_visits(insert,1)]).
-test1 :- cpairhmm([a,g,a,g],[g,a,g,a],X), write(X).
-*/
-
-/* Test of max_visits_relative
-constraint_checks([max_visits_relative([delete,insert],1,10)]).
-
-test2 :-
-	cpairhmm([a,g,a,g],[g,a,g,a],X),
-	write(X).
-
-long_test2 :-
-	cpairhmm([a,g,a,g,a,g,a,g,a,g,a,g],[g,a,g,a,g,a,g,a,g,a,g,a],X),
-	write(X).
-*/
-
+constraint_checks([
+		   max_visits_relative([delete,insert],1,8),
+		   fix_alignment(3,3,[insert,match])
+		  ]).
 
 /* Test of fix_alignment
-
  1 2 3 4 5 6 7 8 9 A B C
 [a,g,a,g,a,g,a,g,a,g,a,g]
 [g,a,g,a,g,a,g,a,g,a,g,a]
  ? ? ? i m m m m ? ? ? ?
-
 */
+%constraint_checks([fix_alignment(3,3,[insert,match,insert,match,insert,match])]).
 
-%constraint_checks([fix_alignment(1,1,[insert,match])]).
-constraint_checks([]).
+% No constraints
+%constraint_checks([]).
 
 ga :-
 	cpairhmm([a,g],[g,a],X),
@@ -244,9 +231,6 @@ gaga1 :-
 	cpairhmm([a,g,a,g],[g,a,g,a],X),
 	write(X).
 
-
 gaga3 :-
 	cpairhmm([a,g,a,g,a,g,a,g,a,g,a,g],[g,a,g,a,g,a,g,a,g,a,g,a],X),
-	write(X).				
-
-
+	write(X).
