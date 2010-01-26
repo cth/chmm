@@ -107,3 +107,11 @@ constraint_check(for_window(WindowSize,Constraint),[State,Emit],
 			 [[Shifted,QueueAfter],ConstraintSpecificStoreBefore],
 			 [[Shifted,Queue],ConstraintSpecificStoreAfter]).
 
+
+-----
+
+
+Experiment: 
+Check that running decreases when the number of constraints increases.
+
+

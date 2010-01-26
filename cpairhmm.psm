@@ -4,17 +4,21 @@
 %--------------------------------------------
 
 % Suppress warning about certain clauses not being grouped together
-:- discontiguous(init_constraint_store/2).
-:- discontiguous(constraint_check/4).
+%:- discontiguous(init_constraint_store/2).
+%:- discontiguous(constraint_check/4).
 
 failure :-
 	cpairhmm(_,_,Alignment),
 	member(failure,Alignment).
 
-% Use for debugging:
-cmsw(A,B) :- values(A,AVals), member(B,AVals).
+success :-
+	cpairhmm(_,_,_),
+	not(member(failure,Alignment)).
 
-%cmsw(A,B) :- msw(A,B).
+% Use for debugging:
+%cmsw(A,B) :- values(A,AVals), member(B,AVals).
+
+cmsw(A,B) :- msw(A,B).
 
 % List of symbols which may be used in sequences aligned.
 alphabet([a,c,g,t]).
@@ -118,11 +122,19 @@ queue_size(q(Size,_,_),Size).
 % Constraint implementations
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+init_constraint_store(max_visits(_,_),[0]).
+init_constraint_store(max_visits_relative(_,_,_),[Queue,0]) :- empty_queue(Queue).
+init_constraint_store(fix_alignment(_,_,Alignment),[1,1,Alignment]).
+
+% Non-backtrackable hash table version
+% init_constraint_store(alldifferent, Store) :- new_hashtable(Store).
+
+init_constraint_store(alldifferent,[]).
+
 %%% Constraint: max_visits(State,MaxVisits)
 % Enforce an absolute bound on the number of visits
 % to a particular state.
 
-init_constraint_store(max_visits(_,_),[0]).
 
 constraint_check(max_visits(State,Max), [State,_], [VisitsBefore], [VisitsAfter]) :-
 	VisitsAfter is VisitsBefore + 1,
@@ -135,7 +147,6 @@ constraint_check(max_visits(ConstraintState,_), [VisitState,_], BeforeAndAfter,B
 % This constraint enforces that a particular state is visited
 % at most MaxVisits in any state sequence of WindowSize length
 
-init_constraint_store(max_visits_relative(_,_,_),[Queue,0]) :- empty_queue(Queue).
 
 constraint_check(max_visits_relative(ConstrainedStates,MaxVisits,WindowSize),
 		 [State,_],
@@ -162,7 +173,6 @@ constraint_check(max_visits_relative(ConstrainedStates,MaxVisits,WindowSize),
 % to be aligned to position n_1..n_y of sequence 2 in the way
 % given by StateSequence
 
-init_constraint_store(fix_alignment(_,_,Alignment),[1,1,Alignment]).
 
 % As long as alignment positions in sequences have not yet been reached,
 % do appropriate increment and :-)
@@ -188,29 +198,46 @@ constraint_check(fix_alignment(S1From,S2From,_),[State,Emit],
 constraint_check(fix_alignment(_,_,_),_,[S1,S2,[]],[S1,S2,[]]).
 
 %%% Alldifferent constraint %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Make sure that all states in are different
+% Uses a hashtable as constraint store.
+% Does work under prism semantics :-(
 
-%%% The for_range operator %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Enforces a given constraint for a particular range:
+/* Not backtrackable
+constraint_check(alldifferent, [State,_],HashTable,HashTable) :-
+	hash_code(State,HashCode),
+	not(hashtable_get(HashTable,HashCode,_)),
+	hashtable_register(HashTable,HashCode,visited).
+*/
 
-constraint_check(for_range(From,To,Constraint),[State,Emit],
-		 [PositionBefore, ConstraintSpecificStoreBefore],
-		 [PositionAfter, ConstraintSpecificStoreAfter]) :-
-	PositionAfter is PositionBefore + 1,
-	PositionAfter >= From,
-	PositionAfter =< To,
-	constraint_check(Constraint,[State,Emit],
-			 [ConstraintSpecificStoreBefore],
-			 [ConstraintSpecificStoreAfter]).
 
-	
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint_check(alldifferent,[State,_],StoreIn,[State|StoreIn]) :-
+	not(member(State,StoreIn)).
+
+%%%%%%%%%%%%%%%%%pp%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Tests
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+/*n
 constraint_checks([
 		   max_visits_relative([delete,insert],1,8),
 		   fix_alignment(3,3,[insert,match])
 		  ]).
+*/
+
+/*
+constraint_checks([alldifferent]).
+
+n_viterbig(10,cpairhmm([a],[a,t],Align),P).
+n_viterbig(10,cpairhmm([a],[a,t],Align),P).
+
+Align = [[-,a],[a,t]]
+P = 0.166666666666667 ?;
+Align = [[a,a],[-,t]]
+P = 0.111111111111111 ?;
+no
+| ?-
+*/
+
 
 /* Test of fix_alignment
  1 2 3 4 5 6 7 8 9 A B C
@@ -231,6 +258,15 @@ gaga1 :-
 	cpairhmm([a,g,a,g],[g,a,g,a],X),
 	write(X).
 
-gaga3 :-
-	cpairhmm([a,g,a,g,a,g,a,g,a,g,a,g],[g,a,g,a,g,a,g,a,g,a,g,a],X),
-	write(X).
+gaga2 :-
+	cpairhmm([a,g,a,g,a,g,a,g],[g,a,g,a,g,a,g,a],X).
+
+constraint_checks([]).
+
+ms(G,T) :-
+ statistics(runtime,_),
+ call(G),
+ statistics(runtime,[_,T]).
+
+align :-
+	mk_seq(4,S1),mk_seq(4,S2),viterbi(cpairhmm(S1,S2,_)).
