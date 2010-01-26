@@ -2,6 +2,10 @@
 % Constrained Pair HMM
 % Christian Theil Have, Jan. 2010.
 %--------------------------------------------
+:- [constraint_integration].
+:- [constraint_checkers].
+:- [constraints].
+
 
 % Use for debugging:
 %cmsw(A,B) :- values(A,AVals), member(B,AVals).
@@ -35,7 +39,7 @@ emit(delete, _, B, [-,B]).
 emit(insert, A, _, [A,-]).
 
 cpairhmm(InputA,InputB) :-
-	init_constraint_store,
+	init_global_constraint_store,
 	cpairhmm(begin,InputA,InputB).
 
 cpairhmm(PreviousState,[],[B|BRest]) :-

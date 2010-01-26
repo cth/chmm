@@ -10,12 +10,10 @@ init_local_constraint_store(Store) :-
 init_global_constraint_store :-
 	constraint_checks(Checks),
 	init_constraint_stores(Checks,IndvStores),
-	init_global_constraint_store,
+	retractall(constraint_store(_)),
+	assert(constraint_store([[],nil])),
 	update_global_constraint_store(IndvStores).
 
-init_global_constraint_store :-
-	retractall(constraint_store(_)),
-	assert(constraint_store([[],nil])).
 
 update_global_constraint_store(NewStore) :-
 	retract(constraint_store([PrevStore,Rest])),
@@ -37,7 +35,7 @@ check_constraints(StateUpdate) :-
 	!,
 	constraint_checks(Checks),
 	constraint_store([StoreBefore,_]),
-	constraint_store(S),
+	%constraint_store(S),
 	%write('constraint store: '), write(S), nl,
 	check_each_constraint(StateUpdate,Checks,StoreBefore,StoreAfter),
 	update_global_constraint_store(StoreAfter).

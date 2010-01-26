@@ -2,6 +2,9 @@
 % Constrained Pair HMM
 % Christian Theil Have, Jan. 2010.
 %--------------------------------------------
+:- [constraint_integration].
+:- [constraint_checkers].
+:- [constraints].
 
 % Use for debugging:
 %cmsw(A,B) :- values(A,AVals), member(B,AVals).
