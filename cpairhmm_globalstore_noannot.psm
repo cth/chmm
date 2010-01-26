@@ -1,0 +1,69 @@
+%--------------------------------------------
+% Constrained Pair HMM
+% Christian Theil Have, Jan. 2010.
+%--------------------------------------------
+
+% Use for debugging:
+%cmsw(A,B) :- values(A,AVals), member(B,AVals).
+cmsw(A,B) :- msw(A,B).
+
+% List of symbols which may be used in sequences aligned.
+alphabet([a,c,g,t]).
+
+match_permutations(A,P) :-
+	findall([X,Y], (member(X,A),member(Y,A)), P).
+
+% MSW declarations
+
+values(emit(insert), ABList) :-
+	findall(AB,(alphabet(A),member(E,A),emit(insert,E,-,AB)),ABList).
+
+values(emit(delete), ABList) :-
+	findall(AB,(alphabet(B),member(E,B),emit(delete,-,E,AB)),ABList).
+
+values(emit(match), AB) :-
+	alphabet(A),
+	match_permutations(A,AB).
+
+values(trans(begin),[match,delete,insert]).
+values(trans(match), [match,delete,insert]).
+values(trans(insert), [match,insert]).
+values(trans(delete), [match,delete]).
+
+emit(match, A, B, [A,B]).
+emit(delete, _, B, [-,B]).
+emit(insert, A, _, [A,-]).
+
+cpairhmm(InputA,InputB) :-
+	init_constraint_store,
+	cpairhmm(begin,InputA,InputB).
+
+cpairhmm(PreviousState,[],[B|BRest]) :-
+	cmsw(trans(PreviousState), delete),
+	cmsw(emit(delete), Emit),
+	emit(delete,-,B,Emit),
+	check_constraints([delete,Emit]),
+	cpairhmm(delete,[],BRest).
+
+cpairhmm(PreviousState,[A|ARest],[]) :-
+	cmsw(trans(PreviousState), insert),
+	cmsw(emit(insert), Emit),
+	emit(insert,A,-,Emit),
+	check_constraints([insert,Emit]),
+	cpairhmm(insert,ARest,[]).
+
+cpairhmm(PreviousState,[A|ARest],[B|BRest]) :-
+	cmsw(trans(PreviousState), NextState),
+	cmsw(emit(NextState),Emit),
+	emit(NextState,A,B,Emit),
+	check_constraints([NextState,Emit]),
+	((NextState==match,
+	  cpairhmm(NextState,ARest,BRest))
+	;
+	 ((NextState==insert,
+	  cpairhmm(NextState,ARest,[B|BRest])))
+	;
+	 ((NextState==delete,
+	  cpairhmm(NextState,[A|ARest],BRest)))).
+
+cpairhmm(_,[],[]).
