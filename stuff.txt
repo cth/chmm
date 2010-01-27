@@ -1,5 +1,0 @@
-Idea:
-
-static_msw:
-	Select outcome of msw statically without chance of failure
-	but still addhere to probability semantics

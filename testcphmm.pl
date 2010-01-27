@@ -7,17 +7,11 @@ mk_seq(Len,[a|Seq]) :-
 ms(G,T) :-
  statistics(runtime,_),
  call(G),
- write('here'),
  statistics(runtime,[_,T]),
- write('here'),
  statistics(table,[TableInUse,_TableTotal]),
- write('here'),
  statistics(heap,[HeapInUse,_HeapTotal]),
- write('here'),
  write('running time:'), write(T),nl,
- write('here'),
  write('heapspace used:'), write(HeapInUse),nl,
- write('here'),
  write('tablespace used:'), write(TableInUse),nl.
 
 align(Size) :-
