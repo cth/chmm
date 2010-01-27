@@ -12,6 +12,7 @@ end
 
 d = Dir.open ARGV[0]
 experiments = []
+numfiles = 0
 d.each do |file|
         next if file == "." or file == ".."
         numfiles = numfiles + 1
