@@ -12,3 +12,4 @@ while [ $i -le $1 ]; do
         $3 > $prefix$i
         i=$(($i+1))
 done
+

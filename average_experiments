@@ -1,6 +1,16 @@
-d = Dir.open("runs/") 
-numfiles = 0
-entries_per_line = 0
+#!/usr/bin/ruby 
+
+if ARGV.length != 1
+        puts "Usage: ./average_experiments experiment_directory\n\n"
+        puts "Computes the average over a number of experiment data files"
+        puts "located in the directory given as first argument. "
+        puts "The experiment files are expected to contain an equal number lines  "
+        puts "with an equal number of entries. Each entry is expected to be a number"
+        puts "and entries are expected to be separated by space."
+        exit
+end
+
+d = Dir.open ARGV[0]
 experiments = []
 d.each do |file|
         next if file == "." or file == ".."
