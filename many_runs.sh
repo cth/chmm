@@ -7,9 +7,11 @@ prefix=$2
 targetscript=$3
 
 i=1
+
 while [ $i -le $1 ]; do
         echo "running experiment: $i"
         $3 > $prefix$i
         i=$(($i+1))
 done
+
 
