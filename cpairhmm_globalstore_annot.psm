@@ -38,7 +38,7 @@ emit(delete, _, B, [-,B]).
 emit(insert, A, _, [A,-]).
 
 cpairhmm(InputA,InputB,Alignment) :-
-	init_constraint_store,
+	init_global_constraint_store,
 	cpairhmm(begin,InputA,InputB,Alignment).
 
 cpairhmm(PreviousState,[],[B|BRest],[Emit|AlignmentRest]) :-
@@ -46,14 +46,14 @@ cpairhmm(PreviousState,[],[B|BRest],[Emit|AlignmentRest]) :-
 	cmsw(emit(delete), Emit),
 	emit(delete,-,B,Emit),
 	check_constraints([delete,Emit]),
-	cpairhmm(delete,[],BRest).
+	cpairhmm(delete,[],BRest,AlignmentRest).
 
 cpairhmm(PreviousState,[A|ARest],[],[Emit|AlignmentRest]) :-
 	cmsw(trans(PreviousState), insert),
 	cmsw(emit(insert), Emit),
 	emit(insert,A,-,Emit),
 	check_constraints([insert,Emit]),
-	cpairhmm(insert,ARest,[]).
+	cpairhmm(insert,ARest,[],AlignmentRest).
 
 cpairhmm(PreviousState,[A|ARest],[B|BRest],[Emit|AlignmentRest]) :-
 	cmsw(trans(PreviousState), NextState),
@@ -61,12 +61,12 @@ cpairhmm(PreviousState,[A|ARest],[B|BRest],[Emit|AlignmentRest]) :-
 	emit(NextState,A,B,Emit),
 	check_constraints([NextState,Emit]),
 	((NextState==match,
-	  cpairhmm(NextState,ARest,BRest))
+	  cpairhmm(NextState,ARest,BRest,AlignmentRest))
 	;
 	 ((NextState==insert,
-	  cpairhmm(NextState,ARest,[B|BRest])))
+	  cpairhmm(NextState,ARest,[B|BRest],AlignmentRest)))
 	;
 	 ((NextState==delete,
-	  cpairhmm(NextState,[A|ARest],BRest)))).
+	  cpairhmm(NextState,[A|ARest],BRest,AlignmentRest)))).
 
 cpairhmm(_,[],[],[]).
