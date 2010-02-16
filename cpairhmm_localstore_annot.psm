@@ -7,11 +7,12 @@
 :- [constraints].
 
 % Use for debugging:
-%cmsw(A,B) :- values(A,AVals), member(B,AVals).
-cmsw(A,B) :- msw(A,B).
+cmsw(A,B) :- values(A,AVals), member(B,AVals).
+%#cmsw(A,B) :- msw(A,B).
 
 % List of symbols which may be used in sequences aligned.
-alphabet([a,c,g,t]).
+%alphabet([a,c,g,t]).
+alphabet([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]).
 
 match_permutations(A,P) :-
 	findall([X,Y], (member(X,A),member(Y,A)), P).
@@ -38,8 +39,8 @@ emit(delete, _, B, [-,B]).
 emit(insert, A, _, [A,-]).
 
 cpairhmm(InputA,InputB,Alignment) :-
-	init_constraint_stores(ConstraintStores),
-	cpairhmm(begin,InputA,InputB,ConstraintStores,Alignment).
+	init_local_constraint_store(ConstraintStore),
+	cpairhmm(begin,InputA,InputB,ConstraintStore,Alignment).
 
 cpairhmm(PreviousState,[],[B|BRest], ConstraintsBefore,[Emit|AlignmentRest]) :-
 	cmsw(trans(PreviousState), delete),

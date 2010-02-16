@@ -1,18 +1,3 @@
-#!/bin/sh
-
-#model=cpairhmm_globalstore_noannot
-model=cpairhmm_localstore_noannot
-
-constraints="constraint_checks([state_specific(local_cardinality([insert,delete],2,4))])."
-
-max=12
-i=0
-
-echo $constraints > constraints.pl
-
-rm -f results.txt
-
-out=`tempfile`
 
 while [ $i -lt $max ]; do
         i=$((i+1))

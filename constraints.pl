@@ -1,1 +1,1 @@
-%NO!constraint_checks([state_specific(local_alldifferent(3))]).
+constraint(local_alldifferent(8)).

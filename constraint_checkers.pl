@@ -116,6 +116,10 @@ constraint_check(alldifferent, [State,_],HashTable,HashTable) :-
 	hashtable_register(HashTable,HashCode,visited).
 */
 
+
+constraint_check(global_alldifferent, Update,Store,[Update|Store]) :-
+        not(member(Update,Store)).
+
 constraint_check(local_alldifferent(WindowSize),Update,QueueBefore,QueueAfter) :-
 	queue_size(QueueBefore,QueueSize),
 	((QueueSize >= WindowSize) -> dequeue(_,QueueBefore,TmpQueue) ; TmpQueue = QueueBefore),

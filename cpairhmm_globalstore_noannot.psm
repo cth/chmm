@@ -13,6 +13,7 @@ cmsw(A,B) :- msw(A,B).
 
 % List of symbols which may be used in sequences aligned.
 alphabet([a,c,g,t]).
+%alphabet([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]).
 
 match_permutations(A,P) :-
 	findall([X,Y], (member(X,A),member(Y,A)), P).

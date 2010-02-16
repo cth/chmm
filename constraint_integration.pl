@@ -4,11 +4,13 @@
 
 
 init_local_constraint_store(Store) :-
-	constraint_checks(Checks),
+        findall(Check, constraint(Check), Checks),
+	%constraint_checks(Checks),
 	init_constraint_stores(Checks,Store).
 
 init_global_constraint_store :-
-	constraint_checks(Checks),
+        findall(Check, constraint(Check), Checks),
+	%constraint_checks(Checks),
 	init_constraint_stores(Checks,IndvStores),
 	retractall(constraint_store(_)),
 	assert(constraint_store([[],nil])),
@@ -33,7 +35,8 @@ init_constraint_stores([Check|CheckRest],[Store|StoreRest]) :-
 % could possible lead to a constraint-violation.
 check_constraints(StateUpdate) :-
 	!,
-	constraint_checks(Checks),
+        findall(Check, constraint(Check), Checks),
+	%constraint_checks(Checks),
 	constraint_store([StoreBefore,_]),
 	%constraint_store(S),
 	%write('constraint store: '), write(S), nl,
@@ -46,7 +49,8 @@ check_constraints(StateUpdate) :-
 % Constraint check is called for each change of state in the model, which
 % could possible lead to a constraint-violation.
 check_constraints(StateUpdate,ConstraintsBefore,ConstraintsAfter) :-
-	constraint_checks(Checks),
+	%constraint_checks(Checks),
+        findall(Check, constraint(Check), Checks),
 	check_each_constraint(StateUpdate,Checks,ConstraintsBefore,ConstraintsAfter).
 
 check_each_constraint(_,[],[],[]).
