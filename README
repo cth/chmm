@@ -1,7 +1,20 @@
 This is an implementation of a constrained hidden Markov model in PRISM.
 The particular implementation is a pair HMM which is usuable for constrained
-sequence alignment.
+sequence alignment. The implementation includes a few well-known global
+constraints which may be used with the model.
 
-A number of well-known global constraints are available in the 
-constraint_checkers.pl file.
+The purpose of this implementation is to illustrate implementation principles
+of constrained HMMs. 
+
+Files:
+autoAnnotations.pl 
+	Henning Christiansens library for efficient Viterbi computation.
+cpairhmm.psm
+	Implementation of the pair HMM.
+constraint_integration.pl
+	Code to integrate constraint checking in PRISM models.
+constraint_checkers
+	Implementation of satisfiability checkers for some global constraints.
+constraints
+	Declaration of model constraints.
 
