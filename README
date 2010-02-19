@@ -6,15 +6,9 @@ constraints which may be used with the model.
 The purpose of this implementation is to illustrate implementation principles
 of constrained HMMs. 
 
-Files:
-autoAnnotations.pl 
-	Henning Christiansens library for efficient Viterbi computation.
-cpairhmm.psm
-	Implementation of the pair HMM.
-constraint_integration.pl
-	Code to integrate constraint checking in PRISM models.
-constraint_checkers
-	Implementation of satisfiability checkers for some global constraints.
-constraints
-	Declaration of model constraints.
+The main file is chmm.pl which constraint the basic machinery for integration
+of side-constraints into PRISM models and some basic constraint checkers.
+
+Examples of PRISM models with side-constraints using this framework can
+be found in the examples/ directory.
 
