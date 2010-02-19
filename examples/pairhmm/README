@@ -1,0 +1,83 @@
+This is an example of PRISM model extended with side-constraints.
+The model is a pair HMM, which can be used for alignment of sequences.
+Side-constraints on the model is declared in the file "constraints.pl". 
+
+
+
+Alignining two sequences
+========================
+
+To align two sequences using program start PRISM:
+
+The program depends on autoAnnotations to actually produce the alignment.
+So the as the first thing, load autoAnnotations:
+
+
+| ?- [autoAnnotations].
+
+Then, use autoAnnotations to load the cpairhmm program,
+
+| ?- prismAnnot(cpairhmm).
+
+Finally, You can run your viterbi query to align the two sequences:
+
+
+| ?- viterbiAnnot(cpairhmm([a,g,g,a],[a,g,g,g],Annotation),P).
+
+Annotation = [[a,a],[g,g],[g,g],[a,g]]
+P = 0.000000188380112 ?
+yes
+
+
+The first two arguments cpairhmm is the two sequences to align. When running
+the viterbi query the Annotation will then be unified with the alignment.
+
+
+Declaring constraints
+=====================
+
+Constraints are declared in the constraints.pl file. A constraint is 
+declared by adding facts on the form,
+
+constraint(ConstraintSpec). 
+
+Multiple such facts may be declared, in which case the conjunction
+of the constraints will be enforced.
+
+ConstraintSpec is a specification of the constraint, which is defined
+using a simple language which includes some identifiers for a few 
+well known constraints.
+
+For instance, we may declare a constraint,
+
+constraint(state_specific(cardinality([insert,delete],2))).
+
+The operator state_specific/1 says that the constraint cardinality
+only applies to the state sequence.  Then, the cardinality constraint 
+assures the we visit the insert or delete state at most two times 
+in any given alignment. 
+
+You may find the following short list of constraints and operators 
+useful in this respect:  
+
+Constraints:
+
+* cardinality(UpdatePatterns,Max)   :
+	ensures that entries from the list UpdatePatterns occurs at most 
+	Max times in the derivation sequence. 
+* alldiff :
+	ensures that all updates in a derivation are different.
+* lock_to_sequence(Seq) :
+	ensures that the sequence of derivation updates
+	is identical to the sequence represented by the list Seq
+* lock_to_set(Set) :
+	ensures that all updates belong to memvbers of the list Set.
+
+Operators:
+
+* forall_subseq(L,C) applies the constraint C to every subsequence of 
+length L in the derivation sequence.
+* for_range(From,To,C) applies C only the range, To-From, both inclusivbe.
+* state_specific(C) applies C only to the State part of the update.
+* emission_specific(C) applies C only to the Emission part of the update.
+
