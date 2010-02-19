@@ -2,13 +2,16 @@
 % Constrained Pair HMM
 % Christian Theil Have, Jan. 2010.
 %--------------------------------------------
-:- [constraint_integration].n
-:- [constraint_checkers].
+
+% Load the CHMM framework
+:- ['../../chmm.pl'].
+
+% Load constraints declared for this model
 :- [constraints].
 
 % Only used to build alignment in the constraint store.
 % This constraint is always succesful.
-%constraint(emission_specific(build_sequence)).
+constraint(emission_specific(record_sequence)).
 
 % List of symbols which may be used in sequences aligned.
 % You will need change this to the alphabet of your sequences.
@@ -56,7 +59,7 @@ cpairhmm(PreviousState,[A|ARest],[],[Emit|AlignmentRest]) :-
 	cpairhmm(insert,ARest,[],AlignmentRest).
 
 cpairhmm(PreviousState,[A|ARest],[B|BRest],[Emit|AlignmentRest]) :-
-	msw(trans(reviousState), NextState),
+	msw(trans(PreviousState), NextState),
 	msw(emit(NextState),Emit),
 	emit_pattern(NextState,A,B,Emit),
 	check_constraints([NextState,Emit]),
