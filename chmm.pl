@@ -16,7 +16,7 @@ init_global_constraint_store :-
 	%constraint_checks(Checks),
 	init_constraint_stores(Checks,IndvStores),
 	retractall(constraint_store(_)),
-	assert(constraint_store([[],nil])),
+	assert(constraint_store([])),
 	update_global_constraint_store(IndvStores).
 
 
@@ -35,10 +35,10 @@ init_constraint_stores([Check|CheckRest],[Store|StoreRest]) :-
 
 % Extract a constraint specific constraint store
 constraint_specific_constraint_store(Key,Store) :-
-	constraint_store([AllStores,_]),
+	constraint_store([CurrentStores|_]),
         findall(Check, constraint(Check), Checks),
-	nth0(Key,Checks,Num),
-	nth0(Store,AllStores,Num).
+	nth0(Num,Checks,Key),
+	nth0(Num,CurrentStores,Store).
 
 % Global store version: check_constraints
 % Constraint check is called for each change of state in the model, which
@@ -47,7 +47,7 @@ check_constraints(StateUpdate) :-
 	!,
         findall(Check, constraint(Check), Checks),
 	%constraint_checks(Checks),
-	constraint_store([StoreBefore,_]),
+	constraint_store([StoreBefore|_]),
 	%constraint_store(S),
 	%write('constraint store: '), write(S), nl,
 	check_each_constraint(StateUpdate,Checks,StoreBefore,StoreAfter),
@@ -91,7 +91,8 @@ check_each_constraint(StateUpdate,[Check|ChecksRest],
 
 init_constraint_store(state_specific(Constraint),Store) :-
     init_constraint_store(Constraint,Store).
-init_constraint_store(emissions_specific(Constraint),Store) :-
+
+init_constraint_store(emission_specific(Constraint),Store) :-
     init_constraint_store(Constraint,Store).
 
 init_constraint_store(for_range(_,_,Constraint), [0,ConstraintSpecificStore]) :-
@@ -105,17 +106,14 @@ init_constraint_store(lock_to_sequence(Sequence),Sequence).
 init_constraint_store(lock_to_set(_Set),[]).
 
 init_constraint_store(cardinality(_,_),0).
+
 init_constraint_store(subseq_cardinality(_,_,_),[Queue,0]) :- empty_queue(Queue).
 
 init_constraint_store(fix_alignment(_,_,Alignment),[1,1,Alignment]).
 
 init_constraint_store(alldifferent,[]).
+
 init_constraint_store(subseq_alldifferent(_WindowSize),Q) :- empty_queue(Q).
-
-init_constraint_store(record_sequence, []).
-
-
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -252,11 +250,6 @@ constraint_check(fix_alignment(S1From,S2From,_),[State,Emit],
 
 % If the list for the alignment becomes empty then it has succesfully been checked:
 constraint_check(fix_alignment(_,_,_),_,[S1,S2,[]],[S1,S2,[]]).
-
-% record_sequence is an "always succesful" constraint check which gathers
-% the sequence as it is visited. It is useful for extracting an annotation.  
-constraint_check(record_sequence,Update,In,[Update|In]).
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

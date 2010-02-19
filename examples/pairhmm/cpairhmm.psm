@@ -9,14 +9,9 @@
 % Load constraints declared for this model
 :- [constraints].
 
-% Only used to build alignment in the constraint store.
-% This constraint is always succesful.
-constraint(emission_specific(record_sequence)).
-
 % List of symbols which may be used in sequences aligned.
 % You will need change this to the alphabet of your sequences.
 alphabet([a,c,g,t]).
-
 
 % MSW declarations:
 
@@ -26,8 +21,7 @@ values(trans(match), [match,delete,insert]).
 values(trans(insert), [match,insert]).
 values(trans(delete), [match,delete]).
 
-% Emission MSWs are declared as possible emit pattern permutations
-% for each state.
+% Emission MSWs are declared as possible emit pattern permutations for each state.
 values(emit(State), ABSet) :-
 	alphabet(A),
 	findall(AB, (member(X,A),member(Y,A),emit_pattern(State,X,Y,AB)), ABList),
@@ -37,39 +31,37 @@ emit_pattern(match, A, B, [A,B]).
 emit_pattern(delete, _, B, [-,B]).
 emit_pattern(insert, A, _, [A,-]).
 
-
-cpairhmm(InputA,InputB,Alignment) :-
+cpairhmm(InputA,InputB,--Alignment) :-
 	init_global_constraint_store,
-	cpairhmm(begin,InputA,InputB,Alignment).
-	% The cons
-	%constraint_specific_constraint_store(emission_specific(build_alignment),Alignment).
+	cpairhmm(begin,InputA,InputB,--Alignment).
 
-cpairhmm(PreviousState,[],[B|BRest],[Emit|AlignmentRest]) :-
+cpairhmm(PreviousState,[],[B|BRest],--[Emit|AlignmentRest]) :-
 	msw(trans(PreviousState), delete),
 	msw(emit(delete), Emit),
 	emit_pattern(delete,-,B,Emit),
 	check_constraints([delete,Emit]),
-	cpairhmm(delete,[],BRest,AlignmentRest).
+	cpairhmm(delete,[],BRest,--AlignmentRest).
 
-cpairhmm(PreviousState,[A|ARest],[],[Emit|AlignmentRest]) :-
+cpairhmm(PreviousState,[A|ARest],[],--[Emit|AlignmentRest]) :-
 	msw(trans(PreviousState), insert),
 	msw(emit(insert), Emit),
 	emit_pattern(insert,A,-,Emit),
 	check_constraints([insert,Emit]),
-	cpairhmm(insert,ARest,[],AlignmentRest).
+	cpairhmm(insert,ARest,[],--AlignmentRest).
 
-cpairhmm(PreviousState,[A|ARest],[B|BRest],[Emit|AlignmentRest]) :-
+cpairhmm(PreviousState,[A|ARest],[B|BRest],--[Emit|AlignmentRest]) :-
 	msw(trans(PreviousState), NextState),
 	msw(emit(NextState),Emit),
 	emit_pattern(NextState,A,B,Emit),
 	check_constraints([NextState,Emit]),
 	((NextState==match,
-	  cpairhmm(NextState,ARest,BRest,AlignmentRest))
+	  cpairhmm(NextState,ARest,BRest,--AlignmentRest))
 	;
 	 ((NextState==insert,
-	  cpairhmm(NextState,ARest,[B|BRest],AlignmentRest)))
+	  cpairhmm(NextState,ARest,[B|BRest],--AlignmentRest)))
 	;
 	 ((NextState==delete,
-	  cpairhmm(NextState,[A|ARest],BRest,AlignmentRest)))).
+	  cpairhmm(NextState,[A|ARest],BRest,--AlignmentRest)))).
 
-cpairhmm(_,[],[],[]).
+cpairhmm(_,[],[],--[]).
+
