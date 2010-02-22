@@ -1,3 +1,5 @@
+Constrained Hidden Markov Models in PRISM
+
 This is an implementation of a constrained hidden Markov model in PRISM.
 The particular implementation is a pair HMM which is usuable for constrained
 sequence alignment. The implementation includes a few well-known global
