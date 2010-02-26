@@ -6,27 +6,21 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-init_local_constraint_store(Store) :-
-        findall(Check, constraint(Check), Checks),
-	%constraint_checks(Checks),
-	init_constraint_stores(Checks,Store).
-
-init_global_constraint_store :-
+init_store :-
         findall(Check, constraint(Check), Checks),
 	%constraint_checks(Checks),
 	init_constraint_stores(Checks,IndvStores),
 	retractall(constraint_store(_)),
 	assert(constraint_store([])),
-	update_global_constraint_store(IndvStores).
+	forward_store(IndvStores).
 
+forward_store(S) :-
+	asserta(store(S))
+	;
+	retract(store(S)).
 
-update_global_constraint_store(NewStore) :-
-	retract(constraint_store(PrevStore)),
-	assert(constraint_store([NewStore|PrevStore])).
+get_store(S) :- !, store(S).
 
-update_global_constraint_store(NewStore) :- 
-	retract(constraint_store([NewStore|PrevStore])),
-	assert(constraint_store(PrevStore)).
 
 init_constraint_stores([],[]).
 init_constraint_stores([Check|CheckRest],[Store|StoreRest]) :-
@@ -44,22 +38,17 @@ constraint_specific_constraint_store(Key,Store) :-
 % Constraint check is called for each change of state in the model, which
 % could possible lead to a constraint-violation.
 check_constraints(StateUpdate) :-
-	!,
         findall(Check, constraint(Check), Checks),
-	%constraint_checks(Checks),
-	constraint_store([StoreBefore|_]),
-	%constraint_store(S),
-	%write('constraint store: '), write(S), nl,
+	get_store(StoreBefore),
 	check_each_constraint(StateUpdate,Checks,StoreBefore,StoreAfter),
-	update_global_constraint_store(StoreAfter).
-
-
+	forward_store(StoreAfter).
 
 
 % Local store version: check_constraints
 % Constraint check is called for each change of state in the model, which
 % could possible lead to a constraint-violation.
 check_constraints(StateUpdate,ConstraintsBefore,ConstraintsAfter) :-
+	!,
 	%constraint_checks(Checks),
         findall(Check, constraint(Check), Checks),
 	check_each_constraint(StateUpdate,Checks,ConstraintsBefore,ConstraintsAfter).
@@ -74,11 +63,7 @@ check_each_constraint(StateUpdate,[Check|ChecksRest],
 	check_each_constraint(StateUpdate,ChecksRest,StoreBeforeRest,StoreAfterRest).
 
 
-
-
-
 % --------------------------------------------------------------------------------------
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

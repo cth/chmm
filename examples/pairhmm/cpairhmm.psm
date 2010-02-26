@@ -32,7 +32,7 @@ emit_pattern(delete, _, B, [-,B]).
 emit_pattern(insert, A, _, [A,-]).
 
 cpairhmm(InputA,InputB,--Alignment) :-
-	init_global_constraint_store,
+	init_store,
 	cpairhmm(begin,InputA,InputB,--Alignment).
 
 cpairhmm(PreviousState,[],[B|BRest],--[Emit|AlignmentRest]) :-
@@ -64,4 +64,3 @@ cpairhmm(PreviousState,[A|ARest],[B|BRest],--[Emit|AlignmentRest]) :-
 	  cpairhmm(NextState,[A|ARest],BRest,--AlignmentRest)))).
 
 cpairhmm(_,[],[],--[]).
-
