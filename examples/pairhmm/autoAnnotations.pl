@@ -42,6 +42,8 @@
 % Bug fixed 30 mar 2009 -> v 2.1
 % - nb: fix is based on undocumented prism predicate '$is_prob_pred'(Pname,Parity)
 %
+% Fixed to use $pd_is_prob_pred instead of deprecated $is_prob_pred (works with PRISM ver. 2.x)
+%
 % STILL NEEDS TO BE TRIMMED FOR OPTIMAL STORAGE UTILIZATION
 
 :- write(user,'autoAnnotations in PRISM, version 2.1, (c) Henning Christiansen 2009'),
@@ -611,4 +613,4 @@ portray_directive_single_goals(A):- writeq(A).
 abstract_version_of_pred_probabilistic(Atom):-
     removeAnnotationsHeadAtom(Atom,Atom1),
     functor(Atom1,P,N),
-    '$is_prob_pred'(P,N).
+    '$pd_is_prob_pred'(P,N).
